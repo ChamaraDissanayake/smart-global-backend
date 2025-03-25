@@ -48,6 +48,13 @@ async function initDB() {
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     `);
+    await conn.query(`
+        CREATE TABLE IF NOT EXISTS whitelist_emails (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
     conn.release();
 }
 await initDB();
@@ -84,6 +91,19 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        // First check if email is whitelisted
+        const [whitelist] = await pool.query(
+            'SELECT 1 FROM whitelist_emails WHERE email = ?',
+            [email]
+        );
+
+        if (whitelist.length === 0) {
+            return res.status(403).json({
+                error: 'Access denied. Your email is not whitelisted.'
+            });
+        }
+
         const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
 
         if (users.length === 0 || !(await bcrypt.compare(password, users[0].password))) {
@@ -301,6 +321,66 @@ app.post('/reset-password', async (req, res) => {
         res.json({ message: 'Password updated successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Whitelist Email Endpoints
+app.post('/whitelist', authenticate, async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        const { email } = req.body;
+
+        // Validate email format
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
+        await conn.query(
+            'INSERT INTO whitelist_emails (email) VALUES (?)',
+            [email]
+        );
+
+        res.status(201).json({ message: 'Email added to whitelist' });
+    } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'Email already exists in whitelist' });
+        }
+        res.status(500).json({ error: err.message });
+    } finally {
+        conn.release();
+    }
+});
+
+app.get('/whitelist', authenticate, async (req, res) => {
+    try {
+        const [emails] = await pool.query(
+            'SELECT email FROM whitelist_emails ORDER BY created_at DESC'
+        );
+        res.json(emails.map(e => e.email));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/whitelist/:email', authenticate, async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        const { email } = req.params;
+
+        const [result] = await conn.query(
+            'DELETE FROM whitelist_emails WHERE email = ?',
+            [email]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Email not found in whitelist' });
+        }
+
+        res.json({ message: 'Email removed from whitelist' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        conn.release();
     }
 });
 
