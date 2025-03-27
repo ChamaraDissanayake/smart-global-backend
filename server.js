@@ -19,7 +19,8 @@ const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT
 });
 
 async function initDB() {
@@ -55,6 +56,22 @@ async function initDB() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS insights (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            category VARCHAR(255) NOT NULL,
+            -- Video fields (all optional)
+            video_title VARCHAR(255),
+            video_thumbnail_url VARCHAR(255),
+            video_url VARCHAR(255),
+            -- Article fields (all optional)
+            article_title VARCHAR(255),
+            article_description TEXT,
+            article_thumbnail_url VARCHAR(255),
+            article_reading_time TINYINT UNSIGNED,  -- Best for small numbers (0-255)
+            article_content JSON
+        );
+`);
     conn.release();
 }
 await initDB();
@@ -121,14 +138,17 @@ app.post('/upload', authenticate, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-        // Check if filename already exists
         const [existing] = await pool.query(
-            'SELECT id FROM files WHERE filename = ?',
+            'SELECT id, path FROM files WHERE filename = ?',
             [req.file.originalname]
         );
 
         if (existing.length > 0) {
-            return res.status(400).json({ error: 'File with this name already exists' });
+            return res.json({
+                message: 'File with this name already exists',
+                fileId: existing[0].id,
+                path: existing[0].path
+            });
         }
 
         const [result] = await pool.query(
@@ -381,6 +401,162 @@ app.delete('/whitelist/:email', authenticate, async (req, res) => {
         res.status(500).json({ error: err.message });
     } finally {
         conn.release();
+    }
+});
+
+//Create Insights
+app.post('/insights', authenticate, async (req, res) => {
+    try {
+        const { category, video, article } = req.body;
+
+        // Smart JSON handling
+        const articleContent = !article?.content ? null
+            : typeof article.content === 'object' ? JSON.stringify(article.content)
+                : article.content; // Assume already stringified if not object
+
+        await pool.query(
+            `INSERT INTO insights (...) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                category,
+                video?.title, video?.thumbnail, video?.url,
+                article?.title, article?.description,
+                article?.thumbnail, article?.time,
+                articleContent // Safely handled
+            ]
+        );
+
+        res.status(201).json({ message: 'Insight created successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get all Insights
+app.get('/insights', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM insights');
+
+        const insights = rows.map(row => ({
+            id: row.id.toString(),
+            category: row.category,
+            ...(row.video_title && {
+                video: {
+                    title: row.video_title,
+                    thumbnail: row.video_thumbnail_url,
+                    url: row.video_url
+                }
+            }),
+            ...(row.article_title && {
+                article: {
+                    title: row.article_title,
+                    description: row.article_description,
+                    thumbnail: row.article_thumbnail_url,
+                    content: row.article_content, // Already parsed by MySQL
+                    url: "", // Add if you store article URLs
+                    time: row.article_reading_time
+                }
+            })
+        }));
+
+        res.json(insights);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get single Insight
+app.get('/insights/:id', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM insights WHERE id = ?', [req.params.id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Insight not found' });
+        }
+
+        const row = rows[0];
+        const insight = {
+            id: row.id.toString(),
+            category: row.category,
+            ...(row.video_title && {
+                video: {
+                    title: row.video_title,
+                    thumbnail: row.video_thumbnail_url,
+                    url: row.video_url
+                }
+            }),
+            ...(row.article_title && {
+                article: {
+                    title: row.article_title,
+                    description: row.article_description,
+                    thumbnail: row.article_thumbnail_url,
+                    content: row.article_content,
+                    url: "",
+                    time: row.article_reading_time
+                }
+            })
+        };
+
+        res.json(insight);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update Insight
+app.put('/insights/:id', authenticate, async (req, res) => {
+    try {
+        const { category, video, article } = req.body;
+        const insightId = req.params.id;
+
+        // Handle article content safely
+        const articleContent = !article?.content ? null
+            : typeof article.content === 'object' ? JSON.stringify(article.content)
+                : article.content;
+
+        await pool.query(
+            `UPDATE insights SET
+                category = ?,
+                video_title = ?,
+                video_thumbnail_url = ?,
+                video_url = ?,
+                article_title = ?,
+                article_description = ?,
+                article_thumbnail_url = ?,
+                article_reading_time = ?,
+                article_content = ?
+            WHERE id = ?`,
+            [
+                category,
+                video?.title,
+                video?.thumbnail,
+                video?.url,
+                article?.title,
+                article?.description,
+                article?.thumbnail,
+                article?.time,
+                articleContent,
+                insightId
+            ]
+        );
+
+        res.json({ message: 'Insight updated successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Insight
+app.delete('/insights/:id', authenticate, async (req, res) => {
+    try {
+        const [result] = await pool.query('DELETE FROM insights WHERE id = ?', [req.params.id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Insight not found' });
+        }
+
+        res.json({ message: 'Insight deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
