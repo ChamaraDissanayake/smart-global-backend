@@ -6,13 +6,18 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
 import fs from 'fs/promises';
+import crypto from 'crypto';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // Configure file uploads
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+    dest: 'uploads/',
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
+
 
 // Database connection
 const pool = mysql.createPool({
@@ -35,9 +40,11 @@ async function initDB() {
     await conn.query(`
         CREATE TABLE IF NOT EXISTS files (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            filename VARCHAR(255) UNIQUE NOT NULL,
-            path VARCHAR(255) NOT NULL
-        )
+            filename VARCHAR(255) NOT NULL,
+            path VARCHAR(512) NOT NULL,
+            content_hash VARCHAR(64) UNIQUE,
+            size BIGINT
+        );
     `);
     await conn.query(`
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -69,7 +76,7 @@ async function initDB() {
             article_description TEXT,
             article_thumbnail_url VARCHAR(255),
             article_reading_time TINYINT UNSIGNED,  -- Best for small numbers (0-255)
-            article_content JSON
+            article_content TEXT
         );
 `);
     conn.release();
@@ -134,37 +141,100 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// Secure file upload endpoint with duplicate prevention
 app.post('/upload', authenticate, upload.single('file'), async (req, res) => {
-    try {
-        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
 
-        const [existing] = await pool.query(
-            'SELECT id, path FROM files WHERE filename = ?',
-            [req.file.originalname]
+    const conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    try {
+        // 1. Calculate file hash
+        const fileBuffer = await fs.readFile(req.file.path);
+        const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+        const fileSize = fileBuffer.length;
+
+        // 2. Check for existing file with content hash
+        const [existing] = await conn.query(
+            'SELECT id, path FROM files WHERE content_hash = ? FOR UPDATE',
+            [fileHash]
         );
 
+        // 3. Handle duplicate
         if (existing.length > 0) {
+            await fs.unlink(req.file.path); // Delete duplicate file
+            await conn.commit();
             return res.json({
-                message: 'File with this name already exists',
+                message: 'File already exists',
                 fileId: existing[0].id,
-                path: existing[0].path
+                path: existing[0].path,
+                isDuplicate: true
             });
         }
 
-        const [result] = await pool.query(
-            'INSERT INTO files (filename, path) VALUES (?, ?)',
-            [req.file.originalname, req.file.path]
+        // 4. Store new file
+        const [result] = await conn.query(
+            'INSERT INTO files (filename, path, content_hash, size) VALUES (?, ?, ?, ?)',
+            [req.file.originalname, req.file.path, fileHash, fileSize]
         );
 
+        await conn.commit();
         res.json({
             message: 'File uploaded successfully',
             fileId: result.insertId,
-            path: req.file.path
+            path: req.file.path,
+            size: fileSize,
+            isDuplicate: false
         });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+
+    } catch (error) {
+        await conn.rollback();
+
+        // Cleanup uploaded file if error occurred
+        if (req.file?.path) {
+            await fs.unlink(req.file.path).catch(() => { });
+        }
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ error: 'File too large (max 50MB)' });
+        }
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'File already exists' });
+        }
+
+        console.error('Upload error:', error);
+        res.status(500).json({
+            error: 'File upload failed',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
+        conn.release();
     }
 });
+
+// Orphaned file cleanup
+async function cleanupOrphanedFiles() {
+    try {
+        const [dbFiles] = await pool.query('SELECT path FROM files');
+        const uploadDir = 'uploads/';
+        const physicalFiles = await fs.readdir(uploadDir);
+
+        await Promise.all(physicalFiles.map(async file => {
+            const fullPath = `${uploadDir}${file}`;
+            const existsInDb = dbFiles.some((dbFile) => dbFile.path === fullPath);
+            if (!existsInDb) {
+                await fs.unlink(fullPath).catch(() => { });
+            }
+        }));
+    } catch (err) {
+        console.error('Cleanup error:', err);
+    }
+}
+
+// Run cleanup on startup and periodically
+cleanupOrphanedFiles();
+setInterval(cleanupOrphanedFiles, 24 * 60 * 60 * 1000); // Daily
 
 app.get('/files', async (req, res) => {
     try {
@@ -406,31 +476,58 @@ app.delete('/whitelist/:email', authenticate, async (req, res) => {
 
 //Create Insights
 app.post('/insights', authenticate, async (req, res) => {
+    const conn = await pool.getConnection();
     try {
         const { category, video, article } = req.body;
+        // Validate required fields
+        if (!category) {
+            return res.status(400).json({ error: 'Category is required' });
+        }
 
-        // Smart JSON handling
-        const articleContent = !article?.content ? null
-            : typeof article.content === 'object' ? JSON.stringify(article.content)
-                : article.content; // Assume already stringified if not object
+        // Prepare article content (store as plain text)
+        const articleContent = article?.content || null;
 
-        await pool.query(
-            `INSERT INTO insights (...) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
+        const query = `
+            INSERT INTO insights (
                 category,
-                video?.title, video?.thumbnail, video?.url,
-                article?.title, article?.description,
-                article?.thumbnail, article?.time,
-                articleContent // Safely handled
-            ]
-        );
+                video_title,
+                video_thumbnail_url,
+                video_url,
+                article_title,
+                article_description,
+                article_thumbnail_url,
+                article_reading_time,
+                article_content
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
 
-        res.status(201).json({ message: 'Insight created successfully' });
+        const [result] = await conn.query(query, [
+            category,
+            video?.title || null,
+            video?.thumbnail || null,
+            video?.url || null,
+            article?.title || null,
+            article?.description || null,
+            article?.thumbnail || null,
+            article?.time || null,
+            articleContent  // Storing as plain text
+        ]);
+
+        res.status(201).json({
+            message: 'Insight created successfully',
+            insightId: result.insertId
+        });
+
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Insight creation error:', err);
+        res.status(500).json({
+            error: 'Failed to create insight',
+            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    } finally {
+        conn.release();
     }
 });
-
 // Get all Insights
 app.get('/insights', async (req, res) => {
     try {
