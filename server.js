@@ -88,14 +88,20 @@ const authenticate = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Access denied' });
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            if (err.name === 'TokenExpiredError') {
+                return res.status(401).json({ error: 'Token expired' });
+            }
+            return res.status(403).json({ error: 'Invalid token' });
+        }
+
         req.userId = decoded.userId;
         next();
-    } catch (err) {
-        res.status(400).json({ error: 'Invalid token' });
-    }
+    });
 };
+
+export default authenticate;
 
 // Routes
 app.post('/register', async (req, res) => {
@@ -134,7 +140,7 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ userId: users[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ userId: users[0].id }, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.json({ token });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -349,7 +355,7 @@ app.post('/request-password-reset', async (req, res) => {
         }
 
         const userId = users[0].id;
-        const token = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '15m' });
+        const token = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         await pool.query(
             'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))',
