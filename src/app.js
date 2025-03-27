@@ -4,6 +4,7 @@ import cors from 'cors';
 import { initDB } from './config/db.js';
 import routes from './routes/index.js';
 import errorHandler from './middleware/error.js';
+import path from 'path';
 
 const app = express();
 
@@ -19,6 +20,10 @@ app.use('/api', routes);
 
 // Error handling
 app.use(errorHandler);
+
+
+// View images
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Start server
 const PORT = process.env.PORT || 3000;

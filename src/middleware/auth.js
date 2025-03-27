@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import pool from '../config/db.js';
 
 const authenticate = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];

@@ -23,7 +23,12 @@ export default {
     },
 
     async delete(id) {
+        const file = await this.getPath(id); // Get path before deletion
         const [result] = await pool.query('DELETE FROM files WHERE id = ?', [id]);
+
+        if (result.affectedRows > 0 && file) {
+            await fs.unlink(file).catch(() => { }); // Delete the physical file
+        }
         return result.affectedRows > 0;
     },
 

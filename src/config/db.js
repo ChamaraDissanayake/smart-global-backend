@@ -4,17 +4,17 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3306
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 3306
 });
 
 export async function initDB() {
-    const conn = await pool.getConnection();
-    try {
-        await conn.query(`
+  const conn = await pool.getConnection();
+  try {
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -22,7 +22,7 @@ export async function initDB() {
       )
     `);
 
-        await conn.query(`
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS files (
         id INT AUTO_INCREMENT PRIMARY KEY,
         filename VARCHAR(255) NOT NULL,
@@ -32,7 +32,7 @@ export async function initDB() {
       )
     `);
 
-        await conn.query(`
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS password_reset_tokens (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
@@ -43,7 +43,7 @@ export async function initDB() {
       )
     `);
 
-        await conn.query(`
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS whitelist_emails (
         id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -51,7 +51,7 @@ export async function initDB() {
       )
     `);
 
-        await conn.query(`
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS insights (
         id INT AUTO_INCREMENT PRIMARY KEY,
         category VARCHAR(255) NOT NULL,
@@ -65,9 +65,19 @@ export async function initDB() {
         article_content TEXT
       )
     `);
-    } finally {
-        conn.release();
-    }
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS team_members (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        position VARCHAR(255) NOT NULL,
+        image_path VARCHAR(512),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } finally {
+    conn.release();
+  }
 }
 
 export default pool;
