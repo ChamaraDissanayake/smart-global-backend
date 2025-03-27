@@ -601,16 +601,20 @@ app.get('/insights/:id', async (req, res) => {
 
 // Update Insight
 app.put('/insights/:id', authenticate, async (req, res) => {
+    const conn = await pool.getConnection();
     try {
         const { category, video, article } = req.body;
         const insightId = req.params.id;
 
-        // Handle article content safely
-        const articleContent = !article?.content ? null
-            : typeof article.content === 'object' ? JSON.stringify(article.content)
-                : article.content;
+        // Validate required fields
+        if (!category) {
+            return res.status(400).json({ error: 'Category is required' });
+        }
 
-        await pool.query(
+        // Prepare article content (store as plain text)
+        const articleContent = article?.content || null;
+
+        await conn.query(
             `UPDATE insights SET
                 category = ?,
                 video_title = ?,
@@ -624,21 +628,27 @@ app.put('/insights/:id', authenticate, async (req, res) => {
             WHERE id = ?`,
             [
                 category,
-                video?.title,
-                video?.thumbnail,
-                video?.url,
-                article?.title,
-                article?.description,
-                article?.thumbnail,
-                article?.time,
-                articleContent,
+                video?.title || null,
+                video?.thumbnail || null,
+                video?.url || null,
+                article?.title || null,
+                article?.description || null,
+                article?.thumbnail || null,
+                article?.time || null,
+                articleContent,  // Direct text/HTML content
                 insightId
             ]
         );
 
         res.json({ message: 'Insight updated successfully' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('Insight update error:', err);
+        res.status(500).json({
+            error: 'Failed to update insight',
+            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    } finally {
+        conn.release();
     }
 });
 
