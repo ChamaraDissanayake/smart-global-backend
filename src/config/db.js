@@ -75,6 +75,7 @@ export async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
   } finally {
     conn.release();
   }
