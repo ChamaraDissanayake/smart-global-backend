@@ -1,15 +1,16 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import Whitelist from '../models/Whitelist.js';
-import bcrypt from 'bcrypt';
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const Whitelist = require('../models/Whitelist');
+const bcrypt = require('bcrypt');
 
-export default {
+module.exports = {
     async register(email, password) {
         return await User.create({ email, password });
     },
 
     async login(email, password) {
         const isWhitelisted = await Whitelist.isWhitelisted(email);
+
         if (!isWhitelisted) {
             throw new Error('Access denied. Your email is not whitelisted.');
         }

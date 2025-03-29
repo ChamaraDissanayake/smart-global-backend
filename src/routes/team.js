@@ -1,13 +1,13 @@
-import { Router } from 'express';
-import {
+const { Router } = require('express');
+const {
     createTeamMember,
     getTeamMembers,
     getTeamMember,
     updateTeamMember,
     deleteTeamMember
-} from '../controllers/team.js';
-import authenticate from '../middleware/auth.js';
-import upload from '../config/upload.js';
+} = require('../controllers/team');
+const authenticate = require('../middleware/auth');
+const upload = require('../config/upload');
 
 const router = Router();
 
@@ -17,4 +17,4 @@ router.get('/:id', getTeamMember);
 router.put('/:id', authenticate, upload.single('image'), updateTeamMember);
 router.delete('/:id', authenticate, deleteTeamMember);
 
-export default router;
+module.exports = router;

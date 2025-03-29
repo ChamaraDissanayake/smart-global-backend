@@ -1,10 +1,10 @@
-import { Router } from 'express';
-import authRoutes from './auth.js';
-import fileRoutes from './files.js';
-import insightRoutes from './insights.js';
-import whitelistRoutes from './whitelist.js';
-import teamRoutes from './team.js';
-import chatRoutes from './chat.js';
+const { Router } = require('express');
+const authRoutes = require('./auth');
+const fileRoutes = require('./files');
+const insightRoutes = require('./insights');
+const whitelistRoutes = require('./whitelist');
+const teamRoutes = require('./team');
+const chatRoutes = require('./chat');
 
 const router = Router();
 
@@ -15,4 +15,4 @@ router.use('/whitelist', whitelistRoutes);
 router.use('/team', teamRoutes);
 router.use('/chat', chatRoutes);
 
-export default router;
+module.exports = router;

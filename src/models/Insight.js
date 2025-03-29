@@ -1,6 +1,6 @@
-import pool from '../config/db.js';
+const { pool } = require('../config/db');
 
-export default {
+module.exports = {
     async create(insightData) {
         const [result] = await pool.query(
             `INSERT INTO insights (

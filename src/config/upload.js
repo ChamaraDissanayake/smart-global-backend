@@ -1,8 +1,8 @@
-import multer from 'multer';
+const multer = require('multer');
 
 const upload = multer({
     dest: 'uploads/',
     limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
-export default upload;
+module.exports = upload;

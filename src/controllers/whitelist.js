@@ -1,6 +1,6 @@
-import Whitelist from '../models/Whitelist.js';
+const Whitelist = require('../models/Whitelist');
 
-export const addEmail = async (req, res) => {
+const addEmail = async (req, res) => {
     try {
         const { email } = req.body;
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -17,7 +17,7 @@ export const addEmail = async (req, res) => {
     }
 };
 
-export const getEmails = async (req, res) => {
+const getEmails = async (req, res) => {
     try {
         const emails = await Whitelist.getAllEmails();
         res.json(emails);
@@ -26,7 +26,7 @@ export const getEmails = async (req, res) => {
     }
 };
 
-export const removeEmail = async (req, res) => {
+const removeEmail = async (req, res) => {
     try {
         const { email } = req.params;
         const deleted = await Whitelist.removeEmail(email);
@@ -39,4 +39,10 @@ export const removeEmail = async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+};
+
+module.exports = {
+    addEmail,
+    getEmails,
+    removeEmail
 };

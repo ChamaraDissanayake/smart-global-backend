@@ -1,8 +1,8 @@
-import pool from '../config/db.js';
-import bcrypt from 'bcrypt';
+const { pool } = require('../config/db');
+const bcrypt = require('bcrypt');
 
-export default {
-    async create({ email, password }) {
+module.exports = {
+    async create(email, password) {
         const hashedPassword = await bcrypt.hash(password, 10);
         const [result] = await pool.query(
             'INSERT INTO users (email, password) VALUES (?, ?)',

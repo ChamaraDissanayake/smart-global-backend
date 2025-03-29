@@ -1,11 +1,10 @@
-import { openai, assistantId } from '../config/open-ai.js';
-import Chat from '../models/Chat.js';
+const { openai, assistantId } = require('../config/open-ai');
+const Chat = require('../models/Chat');
 
 const { getThreadByUserId, createThread, saveMessage, getChatHistory } = Chat;
 
-export const processChat = async (userId, userInput) => {
-    let threadId = await getThreadByUserId(userId);
-
+const processChat = async (userId, userInput) => {
+    let threadId = await getThreadByUserId(userId).id;
     if (!threadId) {
         const newThread = await openai.beta.threads.create();
         threadId = newThread.id;
@@ -27,15 +26,22 @@ export const processChat = async (userId, userInput) => {
         runStatus = await openai.beta.threads.runs.retrieve(threadId, run.id);
     }
 
-    const messages = await openai.beta.threads.messages.list(threadId, { order: 'desc', limit: 1 });
-    const botResponse = messages.data.length > 0 ? messages.data[0].content[0].text.value : "I'm not sure how to respond.";
-
-    await saveMessage(threadId, 'user', userInput);
-    await saveMessage(threadId, 'assistant', botResponse);
+    const messages = await openai.beta.threads.messages.list(threadId, {
+        order: 'desc',
+        limit: 1
+    });
+    const botResponse = messages.data.length > 0
+        ? messages.data[0].content[0].text.value
+        : "I'm not sure how to respond.";
 
     return botResponse;
 };
 
-export const getHistory = async (userId, limit, offset) => {
+const getHistory = async (userId, limit, offset) => {
     return await getChatHistory(userId, limit, offset);
+};
+
+module.exports = {
+    processChat,
+    getHistory
 };

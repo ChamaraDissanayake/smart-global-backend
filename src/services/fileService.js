@@ -1,9 +1,9 @@
-import File from '../models/File.js';
-import fs from 'fs/promises';
-import crypto from 'crypto';
-import path from 'path';
+const File = require('../models/File');
+const fs = require('fs/promises');
+const crypto = require('crypto');
+const path = require('path');
 
-export default {
+module.exports = {
     async uploadFile(file) {
         const fileBuffer = await fs.readFile(file.path);
         const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
@@ -43,7 +43,6 @@ export default {
         };
     },
 
-    // cleanupOrphanedFiles remains the same
     async cleanupOrphanedFiles() {
         try {
             const dbFiles = await File.getAllPaths();

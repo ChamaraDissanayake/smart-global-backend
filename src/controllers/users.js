@@ -1,7 +1,7 @@
-import User from '../models/User.js';
-import bcrypt from 'bcrypt';
+const User = require('../models/User');
+const bcrypt = require('bcrypt');
 
-export const deleteUser = async (req, res) => {
+const deleteUser = async (req, res) => {
     try {
         const { password } = req.body;
         const user = await User.findById(req.userId);
@@ -15,4 +15,8 @@ export const deleteUser = async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+};
+
+module.exports = {
+    deleteUser
 };

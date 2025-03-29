@@ -1,7 +1,8 @@
-import pool from '../config/db.js';
+const { pool } = require('../config/db');
+const fs = require('fs/promises');  // Added filesystem module
 
-export default {
-    async create({ filename, path, content_hash, size }) {
+module.exports = {
+    async create(filename, path, content_hash, size) {
         const [result] = await pool.query(
             'INSERT INTO files (filename, path, content_hash, size) VALUES (?, ?, ?, ?)',
             [filename, path, content_hash, size]
@@ -23,11 +24,11 @@ export default {
     },
 
     async delete(id) {
-        const file = await this.getPath(id); // Get path before deletion
+        const file = await this.getPath(id);
         const [result] = await pool.query('DELETE FROM files WHERE id = ?', [id]);
 
         if (result.affectedRows > 0 && file) {
-            await fs.unlink(file).catch(() => { }); // Delete the physical file
+            await fs.unlink(file).catch(() => { });
         }
         return result.affectedRows > 0;
     },

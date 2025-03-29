@@ -1,6 +1,6 @@
-import teamService from '../services/teamService.js';
+const teamService = require('../services/teamService');
 
-export const createTeamMember = async (req, res) => {
+const createTeamMember = async (req, res) => {
     try {
         const { name, position } = req.body;
         const image = req.file;
@@ -30,7 +30,7 @@ export const createTeamMember = async (req, res) => {
     }
 };
 
-export const getTeamMembers = async (req, res) => {
+const getTeamMembers = async (req, res) => {
     try {
         const members = await teamService.getAllTeamMembers();
         res.json(members);
@@ -42,7 +42,7 @@ export const getTeamMembers = async (req, res) => {
     }
 };
 
-export const getTeamMember = async (req, res) => {
+const getTeamMember = async (req, res) => {
     try {
         const member = await teamService.getTeamMember(req.params.id);
         if (!member) {
@@ -57,7 +57,7 @@ export const getTeamMember = async (req, res) => {
     }
 };
 
-export const updateTeamMember = async (req, res) => {
+const updateTeamMember = async (req, res) => {
     try {
         const { name, position } = req.body;
         const image = req.file;
@@ -88,7 +88,7 @@ export const updateTeamMember = async (req, res) => {
     }
 };
 
-export const deleteTeamMember = async (req, res) => {
+const deleteTeamMember = async (req, res) => {
     try {
         const deleted = await teamService.deleteTeamMember(req.params.id);
         if (!deleted) {
@@ -101,4 +101,12 @@ export const deleteTeamMember = async (req, res) => {
             details: process.env.NODE_ENV === 'development' ? err.message : undefined
         });
     }
+};
+
+module.exports = {
+    createTeamMember,
+    getTeamMembers,
+    getTeamMember,
+    updateTeamMember,
+    deleteTeamMember
 };

@@ -1,6 +1,6 @@
-import authService from '../services/auth.js';
+const authService = require('../services/auth');
 
-export const register = async (req, res) => {
+const register = async (req, res) => {
     try {
         const { email, password } = req.body;
         await authService.register(email, password);
@@ -10,7 +10,7 @@ export const register = async (req, res) => {
     }
 };
 
-export const login = async (req, res) => {
+const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const token = await authService.login(email, password);
@@ -20,7 +20,7 @@ export const login = async (req, res) => {
     }
 };
 
-export const requestPasswordReset = async (req, res) => {
+const requestPasswordReset = async (req, res) => {
     try {
         const { email } = req.body;
         const token = await authService.requestPasswordReset(email);
@@ -30,7 +30,7 @@ export const requestPasswordReset = async (req, res) => {
     }
 };
 
-export const resetPassword = async (req, res) => {
+const resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
         await authService.resetPassword(token, newPassword);
@@ -38,4 +38,11 @@ export const resetPassword = async (req, res) => {
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
+};
+
+module.exports = {
+    register,
+    login,
+    requestPasswordReset,
+    resetPassword
 };

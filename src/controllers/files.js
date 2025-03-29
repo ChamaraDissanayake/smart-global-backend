@@ -1,8 +1,10 @@
-import fileService from '../services/fileService.js';
-import authenticate from '../middleware/auth.js';
-import upload from '../config/upload.js';
+const fileService = require('../services/fileService');
+const authenticate = require('../middleware/auth');
+const upload = require('../config/upload');
+const File = require('../models/File');  // Added missing import
+const fs = require('fs/promises');      // Added missing import
 
-export const uploadFile = [
+const uploadFile = [
     authenticate,
     upload.single('file'),
     async (req, res) => {
@@ -26,7 +28,7 @@ export const uploadFile = [
     }
 ];
 
-export const getFiles = async (req, res) => {
+const getFiles = async (req, res) => {
     try {
         const files = await File.getAll();
         res.json(files);
@@ -35,7 +37,7 @@ export const getFiles = async (req, res) => {
     }
 };
 
-export const deleteFile = async (req, res) => {
+const deleteFile = async (req, res) => {
     try {
         const fileId = req.params.id;
         const filePath = await File.getPath(fileId);
@@ -62,4 +64,10 @@ export const deleteFile = async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+};
+
+module.exports = {
+    uploadFile,
+    getFiles,
+    deleteFile
 };

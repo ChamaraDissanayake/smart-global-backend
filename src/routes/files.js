@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import { uploadFile, getFiles, deleteFile } from '../controllers/files.js';
-import fileService from '../services/fileService.js';
+const { Router } = require('express');
+const { uploadFile, getFiles, deleteFile } = require('../controllers/files');
+const fileService = require('../services/fileService');
 
 const router = Router();
 
@@ -12,4 +12,4 @@ router.delete('/:id', deleteFile);
 fileService.cleanupOrphanedFiles();
 setInterval(fileService.cleanupOrphanedFiles, 24 * 60 * 60 * 1000); // Daily
 
-export default router;
+module.exports = router;

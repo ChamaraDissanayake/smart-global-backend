@@ -1,5 +1,5 @@
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
+const mysql = require('mysql2/promise');
+const dotenv = require('dotenv');
 
 dotenv.config();
 
@@ -11,7 +11,7 @@ const pool = mysql.createPool({
   port: process.env.DB_PORT || 3306
 });
 
-export async function initDB() {
+async function initDB() {
   const conn = await pool.getConnection();
   try {
     await conn.query(`
@@ -81,4 +81,7 @@ export async function initDB() {
   }
 }
 
-export default pool;
+module.exports = {
+  initDB,
+  pool
+};

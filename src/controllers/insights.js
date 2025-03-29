@@ -1,6 +1,6 @@
-import insightService from '../services/insightService.js';
+const insightService = require('../services/insightService');
 
-export const createInsight = async (req, res) => {
+const createInsight = async (req, res) => {
     try {
         const { category, video, article } = req.body;
         if (!category) {
@@ -28,7 +28,7 @@ export const createInsight = async (req, res) => {
     }
 };
 
-export const getInsights = async (req, res) => {
+const getInsights = async (req, res) => {
     try {
         const insights = await insightService.getAllInsights();
         res.json(insights);
@@ -37,7 +37,7 @@ export const getInsights = async (req, res) => {
     }
 };
 
-export const getInsight = async (req, res) => {
+const getInsight = async (req, res) => {
     try {
         const insight = await insightService.getInsight(req.params.id);
         res.json(insight);
@@ -46,7 +46,7 @@ export const getInsight = async (req, res) => {
     }
 };
 
-export const updateInsight = async (req, res) => {
+const updateInsight = async (req, res) => {
     try {
         const { category, video, article } = req.body;
         if (!category) {
@@ -71,11 +71,19 @@ export const updateInsight = async (req, res) => {
     }
 };
 
-export const deleteInsight = async (req, res) => {
+const deleteInsight = async (req, res) => {
     try {
         await insightService.deleteInsight(req.params.id);
         res.json({ message: 'Insight deleted successfully' });
     } catch (err) {
         res.status(404).json({ error: err.message });
     }
+};
+
+module.exports = {
+    createInsight,
+    getInsights,
+    getInsight,
+    updateInsight,
+    deleteInsight
 };

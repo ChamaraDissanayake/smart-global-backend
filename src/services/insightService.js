@@ -1,6 +1,6 @@
-import Insight from '../models/Insight.js';
+const Insight = require('../models/Insight');
 
-export default {
+module.exports = {
     async createInsight(insightData) {
         return await Insight.create(insightData);
     },

@@ -1,7 +1,7 @@
-import pool from '../config/db.js';
+const { pool } = require('../config/db');
 
-export default {
-    async createThread({ id, user_id }) {
+module.exports = {
+    async createThread(id, user_id) {
         const [result] = await pool.query(
             'INSERT INTO chat_threads (id, user_id) VALUES (?, ?)',
             [id, user_id]
@@ -17,7 +17,7 @@ export default {
         return rows[0];
     },
 
-    async createMessage({ thread_id, role, content }) {
+    async createMessage(thread_id, role, content) {
         const [result] = await pool.query(
             'INSERT INTO chat_messages (thread_id, role, content) VALUES (?, ?, ?)',
             [thread_id, role, content]

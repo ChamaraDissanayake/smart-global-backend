@@ -1,12 +1,12 @@
-import { Router } from 'express';
-import {
+const { Router } = require('express');
+const {
     createInsight,
     getInsights,
     getInsight,
     updateInsight,
     deleteInsight
-} from '../controllers/insights.js';
-import authenticate from '../middleware/auth.js';
+} = require('../controllers/insights');
+const authenticate = require('../middleware/auth');
 
 const router = Router();
 
@@ -16,4 +16,4 @@ router.post('/', authenticate, createInsight);
 router.put('/:id', authenticate, updateInsight);
 router.delete('/:id', authenticate, deleteInsight);
 
-export default router;
+module.exports = router;
