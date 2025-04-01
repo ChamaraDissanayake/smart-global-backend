@@ -27,12 +27,12 @@ module.exports = {
         await fs.rename(file.path, newPath);
 
         // Store in DB with new path
-        const fileId = await File.create({
-            filename: file.originalname,
-            path: newPath, // Now includes extension
-            content_hash: fileHash,
-            size: fileSize
-        });
+        const fileId = await File.create(
+            file.originalname,
+            newPath,
+            fileHash,
+            fileSize
+        );
 
         return {
             fileId,

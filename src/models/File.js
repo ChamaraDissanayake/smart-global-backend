@@ -3,11 +3,16 @@ const fs = require('fs/promises');  // Added filesystem module
 
 module.exports = {
     async create(filename, path, content_hash, size) {
-        const [result] = await pool.query(
-            'INSERT INTO files (filename, path, content_hash, size) VALUES (?, ?, ?, ?)',
-            [filename, path, content_hash, size]
-        );
-        return result.insertId;
+        try {
+            const [result] = await pool.query(
+                'INSERT INTO files (filename, path, content_hash, size) VALUES (?, ?, ?, ?)',
+                [filename, path, content_hash, size]
+            );
+            return result.insertId;
+        } catch (error) {
+            console.error("Error inserting into database:", error);
+            throw error;
+        }
     },
 
     async findByHash(content_hash) {
