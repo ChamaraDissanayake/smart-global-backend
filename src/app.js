@@ -8,6 +8,10 @@ const path = require('path');
 
 const app = express();
 
+app.get("/test", (req, res) => {
+    res.send("Chamara API working");
+});
+
 // Initialize database
 initDB().then(() => {
     // Middleware
@@ -24,8 +28,11 @@ initDB().then(() => {
     app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
     // Start server
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    // const PORT = process.env.PORT || 3000;
+    // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    console.log("🚀 Server initialized and middleware applied.");
+}).catch(err => {
+    console.error("❌ Database connection failed:", err);
 });
 
 module.exports = app;
