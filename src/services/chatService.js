@@ -1,7 +1,7 @@
 const { openai, assistantId } = require('../config/open-ai');
 const Chat = require('../models/Chat');
 
-const { getThreadByUserId, createThread, saveMessage, getChatHistory } = Chat;
+const { getThreadByUserId, createThread, getChatHistory } = Chat;
 
 const processChat = async (userId, userInput) => {
     let threadId = await getThreadByUserId(userId).id;
