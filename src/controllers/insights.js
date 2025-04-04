@@ -1,22 +1,42 @@
 const insightService = require('../services/insightService');
+const fileService = require('../services/fileService');
+const { validationResult } = require('express-validator');
 
 const createInsight = async (req, res) => {
     try {
-        const { category, video, article } = req.body;
-        if (!category) {
-            return res.status(400).json({ error: 'Category is required' });
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
+
+        const { category, video, article } = req.body;
+
+        // Process files if present
+        const processFile = async (file) => {
+            return file ? (await fileService.uploadFile(file)).path : undefined;
+        };
+
+        const [videoThumbnailUrl, videoUrl, articleThumbnailUrl] = await Promise.all([
+            req.files?.videoThumbnail?.[0] ? processFile(req.files.videoThumbnail[0]) : video?.thumbnail,
+            (!video?.isExternal && req.files?.videoFile?.[0]) ? processFile(req.files.videoFile[0]) : video?.url,
+            req.files?.articleThumbnail?.[0] ? processFile(req.files.articleThumbnail[0]) : article?.thumbnail
+        ]);
 
         const insightId = await insightService.createInsight({
             category,
-            video_title: video?.title,
-            video_thumbnail_url: video?.thumbnail,
-            video_url: video?.url,
-            article_title: article?.title,
-            article_description: article?.description,
-            article_thumbnail_url: article?.thumbnail,
-            article_reading_time: article?.time,
-            article_content: article?.content
+            video: {
+                title: video?.title,
+                thumbnail: videoThumbnailUrl,
+                url: videoUrl,
+                isExternal: video?.isExternal || false
+            },
+            article: article ? {
+                title: article.title,
+                description: article.description,
+                thumbnail: articleThumbnailUrl,
+                content: article.content,
+                time: article.time || 10
+            } : null
         });
 
         res.status(201).json({
@@ -30,8 +50,19 @@ const createInsight = async (req, res) => {
 
 const getInsights = async (req, res) => {
     try {
-        const insights = await insightService.getAllInsights();
-        res.json(insights);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const result = await insightService.getAllInsights(page, limit);
+        res.json({
+            insights: result.insights,
+            pagination: {
+                total: result.total,
+                page: result.page,
+                limit: result.limit,
+                totalPages: Math.ceil(result.total / result.limit)
+            }
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -48,21 +79,42 @@ const getInsight = async (req, res) => {
 
 const updateInsight = async (req, res) => {
     try {
-        const { category, video, article } = req.body;
-        if (!category) {
-            return res.status(400).json({ error: 'Category is required' });
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
+
+        const { category, video, article } = req.body;
+        const existingInsight = await insightService.getInsight(req.params.id);
+
+        // Process files if present
+        const processFile = async (file, existingUrl) => {
+            return file ? (await fileService.uploadFile(file)).path : existingUrl;
+        };
+
+        const [videoThumbnailUrl, videoUrl, articleThumbnailUrl] = await Promise.all([
+            processFile(req.files?.videoThumbnail?.[0], existingInsight.video?.thumbnail),
+            (!video?.isExternal && req.files?.videoFile?.[0])
+                ? processFile(req.files.videoFile[0], existingInsight.video?.url)
+                : video?.url || existingInsight.video?.url,
+            processFile(req.files?.articleThumbnail?.[0], existingInsight.article?.thumbnail)
+        ]);
 
         await insightService.updateInsight(req.params.id, {
             category,
-            video_title: video?.title,
-            video_thumbnail_url: video?.thumbnail,
-            video_url: video?.url,
-            article_title: article?.title,
-            article_description: article?.description,
-            article_thumbnail_url: article?.thumbnail,
-            article_reading_time: article?.time,
-            article_content: article?.content
+            video: {
+                title: video?.title || existingInsight.video?.title,
+                thumbnail: videoThumbnailUrl,
+                url: videoUrl,
+                isExternal: video?.isExternal ?? existingInsight.video?.isExternal ?? false
+            },
+            article: article ? {
+                title: article.title || existingInsight.article?.title,
+                description: article.description || existingInsight.article?.description,
+                thumbnail: articleThumbnailUrl,
+                content: article.content || existingInsight.article?.content,
+                time: article.time || existingInsight.article?.time || 10
+            } : null
         });
 
         res.json({ message: 'Insight updated successfully' });

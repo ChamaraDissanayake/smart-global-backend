@@ -58,6 +58,7 @@ async function initDB() {
         video_title VARCHAR(255),
         video_thumbnail_url VARCHAR(255),
         video_url VARCHAR(255),
+        video_is_external BOOLEAN DEFAULT FALSE,
         article_title VARCHAR(255),
         article_description TEXT,
         article_thumbnail_url VARCHAR(255),

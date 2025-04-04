@@ -1,8 +1,8 @@
 const fileService = require('../services/fileService');
 const authenticate = require('../middleware/auth');
 const upload = require('../config/upload');
-const File = require('../models/File');  // Added missing import
-const fs = require('fs/promises');      // Added missing import
+const File = require('../models/File');
+const fs = require('fs/promises');
 
 const uploadFile = [
     authenticate,
@@ -54,12 +54,10 @@ const deleteFile = async (req, res) => {
 
         const deleted = await File.delete(fileId);
         res.json({
-            message: 'File deleted completely',
-            details: {
-                dbRecordDeleted: deleted,
-                physicalFileDeleted: true,
-                deletedId: fileId
-            }
+            message: 'File deleted successfully',
+            deletedId: fileId,
+            dbDeleted: deleted,
+            fileDeleted: true
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

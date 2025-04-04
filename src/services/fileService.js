@@ -2,61 +2,84 @@ const File = require('../models/File');
 const fs = require('fs/promises');
 const crypto = require('crypto');
 const path = require('path');
+const { createReadStream } = require('fs');
 
 module.exports = {
     async uploadFile(file) {
-        const fileBuffer = await fs.readFile(file.path);
-        const fileHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
-        const fileSize = fileBuffer.length;
-        const fileExt = path.extname(file.originalname); // Get extension (.png, .mp4, etc.)
-        const newFilename = `${fileHash}${fileExt}`; // Hash + extension
-        const newPath = path.join('uploads', newFilename); // Full new path
+        try {
+            if (!file) throw new Error('No file provided');
 
-        // Check for existing file by hash
-        const existingFile = await File.findByHash(fileHash);
-        if (existingFile) {
-            await fs.unlink(file.path); // Remove duplicate
+            // Read file and calculate hash
+            const fileStream = createReadStream(file.path);
+            const hash = crypto.createHash('md5');
+
+            await new Promise((resolve, reject) => {
+                fileStream.on('data', chunk => hash.update(chunk));
+                fileStream.on('end', resolve);
+                fileStream.on('error', reject);
+            });
+
+            const fileHash = hash.digest('hex');
+            const fileExt = path.extname(file.originalname);
+            const newFilename = `${fileHash}${fileExt}`;
+            const newPath = path.join('uploads', newFilename);
+
+            // Check for existing file
+            const existingFile = await File.findByHash(fileHash);
+            if (existingFile) {
+                await fs.unlink(file.path);
+                return {
+                    ...existingFile,
+                    isDuplicate: true,
+                    message: 'File already exists'
+                };
+            }
+
+            // Move and store file
+            await fs.rename(file.path, newPath);
+            const stats = await fs.stat(newPath);
+
+            const fileId = await File.create(
+                file.originalname,
+                newPath,
+                fileHash,
+                stats.size
+            );
+
             return {
-                ...existingFile,
-                isDuplicate: true,
-                message: 'File already exists'
+                fileId,
+                path: newPath,
+                size: stats.size,
+                isDuplicate: false,
+                message: 'File uploaded successfully'
             };
+        } catch (error) {
+            // Cleanup if error occurs
+            if (file?.path) {
+                await fs.unlink(file.path).catch(() => { });
+            }
+            throw error;
         }
-
-        // Move and rename the file (adds extension)
-        await fs.rename(file.path, newPath);
-
-        // Store in DB with new path
-        const fileId = await File.create(
-            file.originalname,
-            newPath,
-            fileHash,
-            fileSize
-        );
-
-        return {
-            fileId,
-            path: newPath,
-            size: fileSize,
-            isDuplicate: false,
-            message: 'File uploaded successfully'
-        };
     },
 
     async cleanupOrphanedFiles() {
         try {
             const dbFiles = await File.getAllPaths();
-            const uploadDir = 'uploads/';
+            const uploadDir = path.join(process.cwd(), 'uploads');
+
+            await fs.access(uploadDir).catch(() => fs.mkdir(uploadDir));
+
             const physicalFiles = await fs.readdir(uploadDir);
 
             await Promise.all(physicalFiles.map(async file => {
                 const fullPath = path.join(uploadDir, file);
-                if (!dbFiles.includes(fullPath)) {
-                    await fs.unlink(fullPath).catch(() => { });
+                if (!dbFiles.some(dbPath => path.resolve(dbPath) === path.resolve(fullPath))) {
+                    await fs.unlink(fullPath).catch(console.error);
                 }
             }));
         } catch (err) {
             console.error('Cleanup error:', err);
+            throw err;
         }
     }
 };
