@@ -38,5 +38,27 @@ module.exports = {
             "DELETE FROM chat_messages WHERE timestamp < DATE_SUB(NOW(), INTERVAL 30 DAY)"
         );
         return result.affectedRows;
+    },
+
+    async getChatHistory(user_id, limit, offset) {
+        // Convert to numbers to avoid SQL syntax issues
+        limit = Number(limit);
+        offset = Number(offset);
+
+        console.log('Chamara going to get Chat History result:', user_id, limit, offset);
+
+        const [result] = await pool.query(
+            `SELECT cm.role, cm.content, cm.timestamp 
+             FROM chat_threads ct 
+             JOIN chat_messages cm ON ct.id = cm.thread_id 
+             WHERE ct.user_id = ? 
+             ORDER BY cm.timestamp DESC 
+             LIMIT ? OFFSET ?`,
+            [user_id, limit, offset]
+        );
+
+        console.log('Chamara getChatHistory result:', result);
+        return result;
     }
+
 };

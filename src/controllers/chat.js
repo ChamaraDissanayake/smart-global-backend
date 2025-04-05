@@ -1,6 +1,6 @@
 const { processChat, getHistory } = require('../services/chatService');
 
-exports.processChat = async (req, res) => {
+const processChatMessage = async (req, res) => {
     try {
         const { userId, userInput } = req.body;
         if (!userId || !userInput) {
@@ -8,14 +8,15 @@ exports.processChat = async (req, res) => {
         }
 
         const botResponse = await processChat(userId, userInput);
+
         res.json({ botResponse });
-    } catch (error) {
-        console.error('Error processing chat:', error);
-        res.status(500).json({ error: 'Something went wrong' });
+    } catch (err) {
+        console.error('Error processing chat:', err);
+        res.status(500).json({ error: err.message });
     }
 };
 
-exports.getChatHistory = async (req, res) => {
+const getChatHistory = async (req, res) => {
     try {
         const { userId, limit = 10, offset = 0 } = req.query;
         if (!userId) {
@@ -24,8 +25,13 @@ exports.getChatHistory = async (req, res) => {
 
         const chatHistory = await getHistory(userId, limit, offset);
         res.json({ chatHistory });
-    } catch (error) {
-        console.error('Error retrieving chat history:', error);
-        res.status(500).json({ error: 'Something went wrong' });
+    } catch (err) {
+        console.error('Error retrieving chat history:', err);
+        res.status(500).json({ error: err.message });
     }
+};
+
+module.exports = {
+    processChatMessage,
+    getChatHistory
 };

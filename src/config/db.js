@@ -77,6 +77,25 @@ async function initDB() {
       )
     `);
 
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS chat_threads (
+        id VARCHAR(255) NOT NULL,
+        user_id VARCHAR(255) NOT NULL,
+        PRIMARY KEY (id)
+      )
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        thread_id VARCHAR(255) NOT NULL,
+        role ENUM('user','assistant') NOT NULL,
+        content TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (thread_id) REFERENCES chat_threads(id) ON DELETE CASCADE
+      );
+    `);
+
   } finally {
     conn.release();
   }
