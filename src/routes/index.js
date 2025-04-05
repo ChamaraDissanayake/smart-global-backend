@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const authRoutes = require('./auth');
+const userRoutes = require('./user');
 const fileRoutes = require('./files');
 const insightRoutes = require('./insights');
 const whitelistRoutes = require('./whitelist');
@@ -9,7 +9,7 @@ const chatRoutes = require('./chat');
 const router = Router();
 
 // Routes
-router.use('/auth', authRoutes);
+router.use('/user', userRoutes);
 router.use('/files', fileRoutes);
 router.use('/insights', insightRoutes);
 router.use('/whitelist', whitelistRoutes);

@@ -1,13 +1,9 @@
-const Whitelist = require('../models/Whitelist');
+const whitelistService = require('../services/whitelistService');
 
 const addEmail = async (req, res) => {
     try {
         const { email } = req.body;
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return res.status(400).json({ error: 'Invalid email format' });
-        }
-
-        await Whitelist.addEmail(email);
+        await whitelistService.addEmail(email);
         res.status(201).json({ message: 'Email added to whitelist' });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -19,7 +15,16 @@ const addEmail = async (req, res) => {
 
 const getEmails = async (req, res) => {
     try {
-        const emails = await Whitelist.getAllEmails();
+        const emails = await whitelistService.getEmails();
+        res.json(emails);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+const getPendingEmails = async (req, res) => {
+    try {
+        const emails = await whitelistService.getPendingEmails();
         res.json(emails);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -29,7 +34,7 @@ const getEmails = async (req, res) => {
 const removeEmail = async (req, res) => {
     try {
         const { email } = req.params;
-        const deleted = await Whitelist.removeEmail(email);
+        const deleted = await whitelistService.removeEmail(email);
 
         if (!deleted) {
             return res.status(404).json({ error: 'Email not found in whitelist' });
@@ -44,5 +49,6 @@ const removeEmail = async (req, res) => {
 module.exports = {
     addEmail,
     getEmails,
-    removeEmail
+    removeEmail,
+    getPendingEmails
 };

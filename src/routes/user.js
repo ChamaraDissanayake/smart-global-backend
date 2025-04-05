@@ -3,8 +3,9 @@ const {
     register,
     login,
     requestPasswordReset,
-    resetPassword
-} = require('../controllers/auth');
+    resetPassword,
+    deleteUserByEmail
+} = require('../controllers/user');
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/request-password-reset', requestPasswordReset);
 router.post('/reset-password', resetPassword);
+router.delete('/delete', deleteUserByEmail);
 
 module.exports = router;

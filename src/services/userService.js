@@ -12,7 +12,7 @@ module.exports = {
         const isWhitelisted = await Whitelist.isWhitelisted(email);
 
         if (!isWhitelisted) {
-            throw new Error('Access denied. Your email is not whitelisted.');
+            throw new Error('Access denied. Your email is not whitelisted. Contact Admin.');
         }
 
         const user = await User.findByEmail(email);
@@ -39,6 +39,15 @@ module.exports = {
             return true;
         } catch (err) {
             throw new Error('Invalid or expired token');
+        }
+    },
+
+    async deleteUserByEmail(email) {
+        try {
+            await User.deleteByEmail(email);
+            return true;
+        } catch (err) {
+            throw new Error('User deletion failed');
         }
     }
 };

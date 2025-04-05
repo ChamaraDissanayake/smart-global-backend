@@ -26,6 +26,16 @@ module.exports = {
         return result.affectedRows > 0;
     },
 
+    async deleteByEmail(email) {
+        try {
+            const [result] = await pool.query('DELETE FROM users WHERE email = ?', [email]);
+            return result.affectedRows > 0;
+        } catch (error) {
+            return false;
+        }
+
+    },
+
     async updatePassword(id, newPassword) {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         const [result] = await pool.query(
