@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 
 module.exports = {
     async register(email, password) {
-        return await User.create({ email, password });
+        return await User.create(email, password);
     },
 
     async login(email, password) {
