@@ -45,8 +45,6 @@ module.exports = {
         limit = Number(limit);
         offset = Number(offset);
 
-        console.log('Chamara going to get Chat History result:', user_id, limit, offset);
-
         const [result] = await pool.query(
             `SELECT cm.role, cm.content, cm.timestamp 
              FROM chat_threads ct 
@@ -57,7 +55,6 @@ module.exports = {
             [user_id, limit, offset]
         );
 
-        console.log('Chamara getChatHistory result:', result);
         return result;
     }
 

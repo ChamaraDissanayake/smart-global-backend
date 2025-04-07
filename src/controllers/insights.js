@@ -9,7 +9,7 @@ const createInsight = async (req, res) => {
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { category, video, article } = req.body;
+        const { category, video = {}, article = {} } = req.body;
 
         // Process files if present
         const processFile = async (file) => {
@@ -84,7 +84,7 @@ const updateInsight = async (req, res) => {
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { category, video, article } = req.body;
+        const { category, video = {}, article = {} } = req.body;
         const existingInsight = await insightService.getInsight(req.params.id);
 
         // Process files if present
@@ -93,11 +93,17 @@ const updateInsight = async (req, res) => {
         };
 
         const [videoThumbnailUrl, videoUrl, articleThumbnailUrl] = await Promise.all([
-            processFile(req.files?.videoThumbnail?.[0], existingInsight.video?.thumbnail),
+            req.files?.videoThumbnail?.[0]
+                ? processFile(req.files.videoThumbnail[0], existingInsight.video?.thumbnail)
+                : video?.thumbnail || existingInsight.video?.thumbnail,
+
             (!video?.isExternal && req.files?.videoFile?.[0])
                 ? processFile(req.files.videoFile[0], existingInsight.video?.url)
                 : video?.url || existingInsight.video?.url,
-            processFile(req.files?.articleThumbnail?.[0], existingInsight.article?.thumbnail)
+
+            req.files?.articleThumbnail?.[0]
+                ? processFile(req.files.articleThumbnail[0], existingInsight.article?.thumbnail)
+                : article?.thumbnail || existingInsight.article?.thumbnail
         ]);
 
         await insightService.updateInsight(req.params.id, {

@@ -8,6 +8,8 @@ const path = require('path');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.get("/test", (req, res) => {
     res.send("Chamara API working");
 });
