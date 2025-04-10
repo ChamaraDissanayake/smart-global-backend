@@ -73,7 +73,7 @@ async function initDB() {
         name VARCHAR(255) NOT NULL,
         position VARCHAR(255) NOT NULL,
         image_path VARCHAR(512),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        bio TEXT
       )
     `);
 

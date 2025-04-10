@@ -11,10 +11,10 @@ const upload = require('../config/upload');
 
 const router = Router();
 
-router.post('/', authenticate, upload.single('image'), createTeamMember);
+router.post('/', authenticate, createTeamMember);
 router.get('/', getTeamMembers);
 router.get('/:id', getTeamMember);
-router.put('/:id', authenticate, upload.single('image'), updateTeamMember);
+router.put('/:id', authenticate, updateTeamMember);
 router.delete('/:id', authenticate, deleteTeamMember);
 
 module.exports = router;

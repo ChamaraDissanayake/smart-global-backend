@@ -1,41 +1,42 @@
-const { pool } = require('../config/db');
+const Team = require('../models/Team');
 const fs = require('fs/promises');
 const path = require('path');
 
 module.exports = {
-  async create(name, position, image_path) {
-    const [result] = await pool.query(
-      'INSERT INTO team_members (name, position, image_path) VALUES (?, ?, ?)',
-      [name, position, image_path]
-    );
-    return result.insertId;
+  async create(name, position, imagePath, bio = '') {
+    if (!name || !position || !imagePath) {
+      throw new Error('Name, position, and imagePath are required.');
+    }
+
+    return await Team.create(name, position, imagePath, bio);
   },
 
   async getAll() {
-    const [rows] = await pool.query('SELECT * FROM team_members ORDER BY created_at DESC');
-    return rows;
+    return await Team.getAll();
   },
 
   async getById(id) {
-    const [rows] = await pool.query('SELECT * FROM team_members WHERE id = ?', [id]);
-    return rows[0];
+    return await Team.getById(id);
   },
 
-  async update(id, { name, position, image_path }) {
-    const [result] = await pool.query(
-      'UPDATE team_members SET name = ?, position = ?, image_path = ? WHERE id = ?',
-      [name, position, image_path, id]
-    );
-    return result.affectedRows > 0;
+  async update(id, { name, position, imagePath, bio = '' }) {
+    if (!name || !position || !imagePath) {
+      throw new Error('Name, position, and imagePath are required for update.');
+    }
+
+    return await Team.update(id, {
+      name,
+      position,
+      image_path: imagePath,
+      bio
+    });
   },
 
   async delete(id) {
-    // Get member first to delete their image
-    const member = await this.getById(id);
-    const [result] = await pool.query('DELETE FROM team_members WHERE id = ?', [id]);
+    const member = await Team.getById(id);
+    const success = await Team.delete(id);
 
-    // Delete image file if member existed and had an image
-    if (result.affectedRows > 0 && member?.image_path) {
+    if (success && member?.image_path) {
       try {
         await fs.unlink(path.join('uploads', 'team', member.image_path));
       } catch (err) {
@@ -43,6 +44,6 @@ module.exports = {
       }
     }
 
-    return result.affectedRows > 0;
+    return success;
   }
 };

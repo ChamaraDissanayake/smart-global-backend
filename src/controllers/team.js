@@ -2,22 +2,15 @@ const teamService = require('../services/teamService');
 
 const createTeamMember = async (req, res) => {
     try {
-        const { name, position } = req.body;
-        const image = req.file;
+        const { name, position, imagePath, bio } = req.body;
 
-        // Validate all required fields
-        if (!name || !position || !image) {
+        if (!name || !position || !imagePath) {
             return res.status(400).json({
-                error: 'Name, position, and image are all required'
+                error: 'Name, position, and imagePath are required'
             });
         }
 
-        const memberId = await teamService.createTeamMember({
-            name,
-            position,
-            image
-        });
-
+        const memberId = await teamService.create(name, position, imagePath, bio);
         res.status(201).json({
             message: 'Team member created successfully',
             memberId
@@ -32,7 +25,7 @@ const createTeamMember = async (req, res) => {
 
 const getTeamMembers = async (req, res) => {
     try {
-        const members = await teamService.getAllTeamMembers();
+        const members = await teamService.getAll();
         res.json(members);
     } catch (err) {
         res.status(500).json({
@@ -44,7 +37,7 @@ const getTeamMembers = async (req, res) => {
 
 const getTeamMember = async (req, res) => {
     try {
-        const member = await teamService.getTeamMember(req.params.id);
+        const member = await teamService.getById(req.params.id);
         if (!member) {
             return res.status(404).json({ error: 'Team member not found' });
         }
@@ -59,20 +52,19 @@ const getTeamMember = async (req, res) => {
 
 const updateTeamMember = async (req, res) => {
     try {
-        const { name, position } = req.body;
-        const image = req.file;
+        const { name, position, imagePath, bio } = req.body;
 
-        // Validate all required fields
-        if (!name || !position) {
+        if (!name || !position || !imagePath) {
             return res.status(400).json({
-                error: 'Name and position are required'
+                error: 'Name, position, and imagePath are required'
             });
         }
 
-        const updated = await teamService.updateTeamMember(req.params.id, {
+        const updated = await teamService.update(req.params.id, {
             name,
             position,
-            image
+            imagePath,
+            bio
         });
 
         if (!updated) {
@@ -90,7 +82,7 @@ const updateTeamMember = async (req, res) => {
 
 const deleteTeamMember = async (req, res) => {
     try {
-        const deleted = await teamService.deleteTeamMember(req.params.id);
+        const deleted = await teamService.delete(req.params.id);
         if (!deleted) {
             return res.status(404).json({ error: 'Team member not found' });
         }
