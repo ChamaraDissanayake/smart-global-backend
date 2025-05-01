@@ -7,7 +7,6 @@ const {
     deleteTeamMember
 } = require('../controllers/team');
 const authenticate = require('../middleware/auth');
-const upload = require('../config/upload');
 
 const router = Router();
 

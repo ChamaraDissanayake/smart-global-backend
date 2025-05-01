@@ -8,7 +8,10 @@ const openai = new OpenAI({
 
 const assistantId = process.env.OPENAI_ASSISTANT_ID;
 
+const visitorAssistantId = process.env.OPENAI_VISITOR_ASSISTANT_ID;
+
 module.exports = {
     openai,
-    assistantId
+    assistantId,
+    visitorAssistantId
 };

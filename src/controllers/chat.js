@@ -7,7 +7,23 @@ const processChatMessage = async (req, res) => {
             return res.status(400).json({ error: 'userId and userInput are required' });
         }
 
-        const botResponse = await processChat(userId, userInput);
+        const botResponse = await processChat(userId, userInput, false);
+
+        res.json({ botResponse });
+    } catch (err) {
+        console.error('Error processing chat:', err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+const processVisitorChatMessage = async (req, res) => {
+    try {
+        const { userId, userInput } = req.body;
+        if (!userId || !userInput) {
+            return res.status(400).json({ error: 'userId and userInput are required' });
+        }
+
+        const botResponse = await processChat(userId, userInput, true);
 
         res.json({ botResponse });
     } catch (err) {
@@ -33,5 +49,6 @@ const getChatHistory = async (req, res) => {
 
 module.exports = {
     processChatMessage,
+    processVisitorChatMessage,
     getChatHistory
 };

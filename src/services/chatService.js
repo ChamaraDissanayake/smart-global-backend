@@ -1,7 +1,7 @@
-const { openai, assistantId } = require('../config/open-ai');
+const { openai, assistantId, visitorAssistantId } = require('../config/open-ai');
 const Chat = require('../models/Chat');
 
-const processChat = async (userId, userInput) => {
+const processChat = async (userId, userInput, isVisitor) => {
     try {
         let threadId;
 
@@ -25,7 +25,7 @@ const processChat = async (userId, userInput) => {
         });
 
         const run = await openai.beta.threads.runs.create(threadId, {
-            assistant_id: assistantId,
+            assistant_id: isVisitor ? visitorAssistantId : assistantId,
         });
 
         if (!run || !run.id) {
